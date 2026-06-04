@@ -1,4 +1,5 @@
 using Domain.Models;
+using Domain.Repositories;
 
 namespace Domain.Services;
 
@@ -10,29 +11,31 @@ namespace Domain.Services;
 ///   1. Documento válido  → no nulo, no vacío, no numérico negativo.
 ///   2. Edad válida       → entre 0 y 120 años inclusive.
 ///   3. Paciente vivo     → Vivo == true.
-///   4. Sin duplicados    → documento único en el repositorio en memoria.
+///   4. Sin duplicados    → documento único en el repositorio.
 ///
 /// Nota: Etnia es opcional y no se valida.
 /// </summary>
 public class RegistroPaciente
 {
-    // ─── Repositorio en memoria ───────────────────────────────────────────────
-    private readonly List<Paciente> _pacientes = [];
+    private readonly IPacienteRepository _repository;
 
     // ─── Constantes de dominio ────────────────────────────────────────────────
     public const int EdadMinima = 0;
     public const int EdadMaxima = 120;
+
+    // Constructor sin parámetros: mantiene compatibilidad con tests existentes.
+    public RegistroPaciente() : this(new InMemoryPacienteRepository()) { }
+
+    public RegistroPaciente(IPacienteRepository repository)
+    {
+        _repository = repository;
+    }
 
     // ─── API pública ──────────────────────────────────────────────────────────
 
     /// <summary>
     /// Intenta registrar el <paramref name="paciente"/> según las reglas de negocio.
     /// </summary>
-    /// <param name="paciente">Objeto paciente a registrar.</param>
-    /// <returns>
-    /// <see cref="ResultadoRegistro.Exitoso"/> si se registró correctamente;
-    /// de lo contrario, el resultado que indica el primer error encontrado.
-    /// </returns>
     public ResultadoRegistro Registrar(Paciente paciente)
     {
         // Regla 1 – Documento válido
@@ -48,27 +51,24 @@ public class RegistroPaciente
             return ResultadoRegistro.PacienteFallecido;
 
         // Regla 4 – Sin duplicados
-        if (ExisteDocumento(paciente.Documento))
+        if (_repository.ExistePorDocumento(paciente.Documento))
             return ResultadoRegistro.DocumentoDuplicado;
 
-        _pacientes.Add(paciente);
+        _repository.Agregar(paciente);
         return ResultadoRegistro.Exitoso;
     }
 
     /// <summary>Devuelve una vista de solo lectura de todos los pacientes registrados.</summary>
-    public IReadOnlyList<Paciente> ObtenerPacientes() => _pacientes.AsReadOnly();
+    public IReadOnlyList<Paciente> ObtenerPacientes() => _repository.ObtenerTodos();
 
     /// <summary>
     /// Devuelve la cantidad de pacientes actualmente registrados.
     /// Útil para verificar que el registro no persistió ante errores.
     /// </summary>
-    public int TotalRegistrados => _pacientes.Count;
+    public int TotalRegistrados => _repository.ObtenerTodos().Count;
 
     // ─── Métodos privados de validación ──────────────────────────────────────
 
-    /// <summary>
-    /// Valida que el documento no sea nulo/vacío y, si es numérico, no sea negativo.
-    /// </summary>
     private static bool DocumentoEsValido(string documento)
     {
         if (string.IsNullOrWhiteSpace(documento))
@@ -81,16 +81,6 @@ public class RegistroPaciente
         return true;
     }
 
-    /// <summary>
-    /// Valida que la edad se encuentre en el rango [EdadMinima, EdadMaxima].
-    /// </summary>
     private static bool EdadEsValida(int edad) =>
         edad >= EdadMinima && edad <= EdadMaxima;
-
-    /// <summary>
-    /// Comprueba si ya existe un paciente registrado con el mismo documento.
-    /// Comparación exacta (case-sensitive) para documentos alfanuméricos.
-    /// </summary>
-    private bool ExisteDocumento(string documento) =>
-        _pacientes.Exists(p => p.Documento == documento);
 }
