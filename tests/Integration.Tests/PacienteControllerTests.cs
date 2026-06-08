@@ -27,9 +27,9 @@ public class PacienteControllerTests : IClassFixture<WebApplicationFactory<Progr
 
     // Given: request con todos los datos válidos
     // When:  POST /api/paciente/registrar
-    // Then:  HTTP 200 y body contiene "Exitoso"
+    // Then:  HTTP 201 Created y body contiene "Exitoso"
     [Fact]
-    public async Task PostRegistrar_PacienteValido_Retorna200Exitoso()
+    public async Task PostRegistrar_PacienteValido_Retorna201Creado()
     {
         // Arrange
         var request = new PacienteRequest("30000001", "Ana García", 30, true);
@@ -39,15 +39,15 @@ public class PacienteControllerTests : IClassFixture<WebApplicationFactory<Progr
         var body     = await response.Content.ReadAsStringAsync();
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
         body.Should().Contain("Exitoso");
     }
 
     // Given: request con edad fuera de rango (200)
     // When:  POST /api/paciente/registrar
-    // Then:  HTTP 200 y body contiene "EdadInvalida"
+    // Then:  HTTP 400 BadRequest y body contiene "EdadInvalida"
     [Fact]
-    public async Task PostRegistrar_EdadInvalida_Retorna200EdadInvalida()
+    public async Task PostRegistrar_EdadInvalida_Retorna400BadRequest()
     {
         // Arrange
         var request = new PacienteRequest("30000002", "Juan Pérez", 200, true);
@@ -57,15 +57,15 @@ public class PacienteControllerTests : IClassFixture<WebApplicationFactory<Progr
         var body     = await response.Content.ReadAsStringAsync();
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         body.Should().Contain("EdadInvalida");
     }
 
     // Given: primer registro exitoso del documento "30000003"
     // When:  se envía el mismo documento por segunda vez
-    // Then:  HTTP 200 y body contiene "DocumentoDuplicado"
+    // Then:  HTTP 409 Conflict y body contiene "DocumentoDuplicado"
     [Fact]
-    public async Task PostRegistrar_DocumentoDuplicado_Retorna200Duplicado()
+    public async Task PostRegistrar_DocumentoDuplicado_Retorna409Conflict()
     {
         // Arrange
         var request = new PacienteRequest("30000003", "María López", 25, true);
@@ -76,7 +76,7 @@ public class PacienteControllerTests : IClassFixture<WebApplicationFactory<Progr
         var body     = await response.Content.ReadAsStringAsync();
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         body.Should().Contain("DocumentoDuplicado");
     }
 }

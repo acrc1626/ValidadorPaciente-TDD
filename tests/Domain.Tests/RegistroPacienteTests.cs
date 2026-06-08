@@ -28,6 +28,7 @@
  */
 
 using Domain.Models;
+using Domain.Repositories;
 using Domain.Services;
 
 namespace Domain.Tests;
@@ -42,7 +43,7 @@ public class RegistroPacienteTests
     [TestInitialize]
     public void Inicializar()
     {
-        _servicio = new RegistroPaciente();
+        _servicio = new RegistroPaciente(new InMemoryPacienteRepository());
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -51,21 +52,19 @@ public class RegistroPacienteTests
     // ══════════════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// TDD-RED → Escribir este test antes de implementar Registrar().
-    ///
     /// Given  un paciente con todos los campos válidos
     /// When   se llama a Registrar()
     /// Then   el resultado debe ser ResultadoRegistro.Exitoso
     /// </summary>
     [TestMethod]
     [TestCategory("RegistroExitoso")]
-    public void Registrar_PacienteValido_RetornaExitoso()
+    public async Task Registrar_PacienteValido_RetornaExitoso()
     {
         // Arrange
         var paciente = CrearPacienteValido();
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.Exitoso, resultado,
@@ -79,18 +78,19 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("RegistroExitoso")]
-    public void Registrar_PacienteValido_AgregaAlRepositorio()
+    public async Task Registrar_PacienteValido_AgregaAlRepositorio()
     {
         // Arrange
         var paciente = CrearPacienteValido();
 
         // Act
-        _servicio.Registrar(paciente);
+        await _servicio.Registrar(paciente);
 
         // Assert
-        Assert.AreEqual(1, _servicio.TotalRegistrados,
+        var pacientes = await _servicio.ObtenerPacientes();
+        Assert.AreEqual(1, pacientes.Count,
             "Después de un registro exitoso debe haber exactamente 1 paciente.");
-        Assert.AreEqual(paciente.Documento, _servicio.ObtenerPacientes()[0].Documento);
+        Assert.AreEqual(paciente.Documento, pacientes[0].Documento);
     }
 
     /// <summary>
@@ -100,14 +100,13 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("RegistroExitoso")]
-    public void Registrar_PacienteSinEtnia_EtniaOpcionalNoAfectaRegistro()
+    public async Task Registrar_PacienteSinEtnia_EtniaOpcionalNoAfectaRegistro()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Etnia = null;
+        var paciente = CrearPacienteValido() with { Etnia = null };
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.Exitoso, resultado,
@@ -121,14 +120,13 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("RegistroExitoso")]
-    public void Registrar_PacienteConEtniaVacia_EtniaOpcionalNoAfectaRegistro()
+    public async Task Registrar_PacienteConEtniaVacia_EtniaOpcionalNoAfectaRegistro()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Etnia = string.Empty;
+        var paciente = CrearPacienteValido() with { Etnia = string.Empty };
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.Exitoso, resultado,
@@ -147,14 +145,13 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("ValidacionEdad")]
-    public void Registrar_EdadNegativa_RetornaEdadInvalida()
+    public async Task Registrar_EdadNegativa_RetornaEdadInvalida()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Edad = -1;
+        var paciente = CrearPacienteValido() with { Edad = -1 };
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.EdadInvalida, resultado,
@@ -168,14 +165,13 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("ValidacionEdad")]
-    public void Registrar_EdadMayorA120_RetornaEdadInvalida()
+    public async Task Registrar_EdadMayorA120_RetornaEdadInvalida()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Edad = 121;
+        var paciente = CrearPacienteValido() with { Edad = 121 };
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.EdadInvalida, resultado,
@@ -189,14 +185,13 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("ValidacionEdad")]
-    public void Registrar_EdadCero_LimiteInferiorValido_RetornaExitoso()
+    public async Task Registrar_EdadCero_LimiteInferiorValido_RetornaExitoso()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Edad = 0;
+        var paciente = CrearPacienteValido() with { Edad = 0 };
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.Exitoso, resultado,
@@ -210,14 +205,13 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("ValidacionEdad")]
-    public void Registrar_Edad120_LimiteSuperiorValido_RetornaExitoso()
+    public async Task Registrar_Edad120_LimiteSuperiorValido_RetornaExitoso()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Edad = 120;
+        var paciente = CrearPacienteValido() with { Edad = 120 };
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.Exitoso, resultado,
@@ -236,14 +230,13 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("ValidacionDocumento")]
-    public void Registrar_DocumentoNulo_RetornaDocumentoInvalido()
+    public async Task Registrar_DocumentoNulo_RetornaDocumentoInvalido()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Documento = null!;
+        var paciente = CrearPacienteValido() with { Documento = null! };
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.DocumentoInvalido, resultado,
@@ -257,14 +250,13 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("ValidacionDocumento")]
-    public void Registrar_DocumentoVacio_RetornaDocumentoInvalido()
+    public async Task Registrar_DocumentoVacio_RetornaDocumentoInvalido()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Documento = string.Empty;
+        var paciente = CrearPacienteValido() with { Documento = string.Empty };
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.DocumentoInvalido, resultado,
@@ -278,14 +270,13 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("ValidacionDocumento")]
-    public void Registrar_DocumentoSoloEspacios_RetornaDocumentoInvalido()
+    public async Task Registrar_DocumentoSoloEspacios_RetornaDocumentoInvalido()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Documento = "   ";
+        var paciente = CrearPacienteValido() with { Documento = "   " };
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.DocumentoInvalido, resultado,
@@ -299,14 +290,13 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("ValidacionDocumento")]
-    public void Registrar_DocumentoNumericoNegativo_RetornaDocumentoInvalido()
+    public async Task Registrar_DocumentoNumericoNegativo_RetornaDocumentoInvalido()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Documento = "-12345";
+        var paciente = CrearPacienteValido() with { Documento = "-12345" };
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.DocumentoInvalido, resultado,
@@ -320,14 +310,13 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("ValidacionDocumento")]
-    public void Registrar_DocumentoAlfanumerico_Pasaporte_RetornaExitoso()
+    public async Task Registrar_DocumentoAlfanumerico_Pasaporte_RetornaExitoso()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Documento = "PA123456";
+        var paciente = CrearPacienteValido() with { Documento = "PA123456" };
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.Exitoso, resultado,
@@ -346,14 +335,13 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("EstadoVida")]
-    public void Registrar_PacienteFallecido_RetornaPacienteFallecido()
+    public async Task Registrar_PacienteFallecido_RetornaPacienteFallecido()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Vivo = false;
+        var paciente = CrearPacienteValido() with { Vivo = false };
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.PacienteFallecido, resultado,
@@ -367,17 +355,17 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("EstadoVida")]
-    public void Registrar_PacienteFallecido_NoAgregaAlRepositorio()
+    public async Task Registrar_PacienteFallecido_NoAgregaAlRepositorio()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Vivo = false;
+        var paciente = CrearPacienteValido() with { Vivo = false };
 
         // Act
-        _servicio.Registrar(paciente);
+        await _servicio.Registrar(paciente);
 
         // Assert
-        Assert.AreEqual(0, _servicio.TotalRegistrados,
+        var pacientes = await _servicio.ObtenerPacientes();
+        Assert.AreEqual(0, pacientes.Count,
             "Un paciente fallecido no debe persistir en el repositorio.");
     }
 
@@ -393,16 +381,16 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("Duplicados")]
-    public void Registrar_DocumentoDuplicado_RetornaDocumentoDuplicado()
+    public async Task Registrar_DocumentoDuplicado_RetornaDocumentoDuplicado()
     {
         // Arrange
         var paciente1 = CrearPacienteValido();
         var paciente2 = CrearPacienteValido(); // mismo documento que paciente1
 
-        _servicio.Registrar(paciente1); // primer registro exitoso
+        await _servicio.Registrar(paciente1); // primer registro exitoso
 
         // Act
-        var resultado = _servicio.Registrar(paciente2);
+        var resultado = await _servicio.Registrar(paciente2);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.DocumentoDuplicado, resultado,
@@ -416,19 +404,20 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("Duplicados")]
-    public void Registrar_DocumentoDuplicado_NoAgregaSegundoPaciente()
+    public async Task Registrar_DocumentoDuplicado_NoAgregaSegundoPaciente()
     {
         // Arrange
         var paciente1 = CrearPacienteValido();
         var paciente2 = CrearPacienteValido();
 
-        _servicio.Registrar(paciente1);
+        await _servicio.Registrar(paciente1);
 
         // Act
-        _servicio.Registrar(paciente2);
+        await _servicio.Registrar(paciente2);
 
         // Assert
-        Assert.AreEqual(1, _servicio.TotalRegistrados,
+        var pacientes = await _servicio.ObtenerPacientes();
+        Assert.AreEqual(1, pacientes.Count,
             "El repositorio no debe contener duplicados.");
     }
 
@@ -439,20 +428,21 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("Duplicados")]
-    public void Registrar_DosPacientesConDocumentosDistintos_RegistraAmbos()
+    public async Task Registrar_DosPacientesConDocumentosDistintos_RegistraAmbos()
     {
         // Arrange
         var paciente1 = CrearPacienteValido("11111111");
         var paciente2 = CrearPacienteValido("22222222");
 
         // Act
-        var resultado1 = _servicio.Registrar(paciente1);
-        var resultado2 = _servicio.Registrar(paciente2);
+        var resultado1 = await _servicio.Registrar(paciente1);
+        var resultado2 = await _servicio.Registrar(paciente2);
 
         // Assert
+        var pacientes = await _servicio.ObtenerPacientes();
         Assert.AreEqual(ResultadoRegistro.Exitoso, resultado1);
         Assert.AreEqual(ResultadoRegistro.Exitoso, resultado2);
-        Assert.AreEqual(2, _servicio.TotalRegistrados,
+        Assert.AreEqual(2, pacientes.Count,
             "Dos pacientes con diferentes documentos deben registrarse sin conflicto.");
     }
 
@@ -468,15 +458,13 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("OrdenValidaciones")]
-    public void Registrar_DocumentoInvalidoYEdadInvalida_PriorizaDocumentoInvalido()
+    public async Task Registrar_DocumentoInvalidoYEdadInvalida_PriorizaDocumentoInvalido()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Documento = string.Empty;
-        paciente.Edad = -5;
+        var paciente = CrearPacienteValido() with { Documento = string.Empty, Edad = -5 };
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.DocumentoInvalido, resultado,
@@ -490,15 +478,13 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("OrdenValidaciones")]
-    public void Registrar_EdadInvalidaYPacienteFallecido_PriorizaEdadInvalida()
+    public async Task Registrar_EdadInvalidaYPacienteFallecido_PriorizaEdadInvalida()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Edad = 200;
-        paciente.Vivo = false;
+        var paciente = CrearPacienteValido() with { Edad = 200, Vivo = false };
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.EdadInvalida, resultado,
@@ -516,14 +502,13 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("CasosLimite")]
-    public void Registrar_DocumentoCero_EsValido()
+    public async Task Registrar_DocumentoCero_EsValido()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Documento = "0";
+        var paciente = CrearPacienteValido() with { Documento = "0" };
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.Exitoso, resultado,
@@ -537,14 +522,13 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("CasosLimite")]
-    public void Registrar_EdadUno_EsValida()
+    public async Task Registrar_EdadUno_EsValida()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Edad = 1;
+        var paciente = CrearPacienteValido() with { Edad = 1 };
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.Exitoso, resultado);
@@ -557,14 +541,13 @@ public class RegistroPacienteTests
     /// </summary>
     [TestMethod]
     [TestCategory("CasosLimite")]
-    public void Registrar_Edad119_EsValida()
+    public async Task Registrar_Edad119_EsValida()
     {
         // Arrange
-        var paciente = CrearPacienteValido();
-        paciente.Edad = 119;
+        var paciente = CrearPacienteValido() with { Edad = 119 };
 
         // Act
-        var resultado = _servicio.Registrar(paciente);
+        var resultado = await _servicio.Registrar(paciente);
 
         // Assert
         Assert.AreEqual(ResultadoRegistro.Exitoso, resultado);

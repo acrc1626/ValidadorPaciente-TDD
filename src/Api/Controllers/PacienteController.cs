@@ -9,15 +9,15 @@ namespace Api.Controllers;
 [Route("api/[controller]")]
 public class PacienteController : ControllerBase
 {
-    private readonly RegistroPaciente _registro;
+    private readonly IRegistroPaciente _registro;
 
-    public PacienteController(RegistroPaciente registro)
+    public PacienteController(IRegistroPaciente registro)
     {
         _registro = registro;
     }
 
     [HttpPost("registrar")]
-    public IActionResult Registrar([FromBody] PacienteRequest request)
+    public async Task<IActionResult> Registrar([FromBody] PacienteRequest request)
     {
         var paciente = new Paciente
         {
@@ -28,7 +28,13 @@ public class PacienteController : ControllerBase
             Etnia     = request.Etnia
         };
 
-        var resultado = _registro.Registrar(paciente);
-        return Ok(resultado.ToString());
+        var resultado = await _registro.Registrar(paciente);
+
+        return resultado switch
+        {
+            ResultadoRegistro.Exitoso            => Created($"/api/paciente/{request.Documento}", resultado.ToString()),
+            ResultadoRegistro.DocumentoDuplicado => Conflict(new { error = resultado.ToString() }),
+            _                                    => BadRequest(new { error = resultado.ToString() })
+        };
     }
 }

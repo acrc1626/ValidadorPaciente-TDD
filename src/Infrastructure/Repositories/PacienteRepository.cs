@@ -1,6 +1,7 @@
 using Domain.Models;
 using Domain.Repositories;
 using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Repositories;
 
@@ -13,15 +14,18 @@ public class PacienteRepository : IPacienteRepository
         _context = context;
     }
 
-    public bool ExistePorDocumento(string documento) =>
-        _context.Pacientes.Any(p => p.Documento == documento);
+    public Task<bool> ExistePorDocumento(string documento) =>
+        _context.Pacientes.AnyAsync(p => p.Documento == documento);
 
-    public void Agregar(Paciente paciente)
+    public async Task Agregar(Paciente paciente)
     {
         _context.Pacientes.Add(paciente);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
     }
 
-    public IReadOnlyList<Paciente> ObtenerTodos() =>
-        _context.Pacientes.ToList().AsReadOnly();
+    public async Task<IReadOnlyList<Paciente>> ObtenerTodos()
+    {
+        var list = await _context.Pacientes.ToListAsync();
+        return list.AsReadOnly();
+    }
 }
