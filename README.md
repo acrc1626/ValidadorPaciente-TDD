@@ -1,49 +1,56 @@
-# ValidadorPaciente — Taller de Pruebas Unitarias con TDD
+# ValidadorPaciente — Taller de Pruebas con TDD
 
-Taller de pruebas unitarias aplicando TDD, AAA y BDD.
-**Universidad de La Sabana · Maestría en Arquitectura de Software**
-Curso: Testing y Validación de Software · 2026
+Universidad de La Sabana · Maestría en Arquitectura de Software  
+Curso: Testing y Validación de Software · 2026  
+Autora: Astrid Carolina Rodríguez Cristancho
 
 ## Descripción
 
-Sistema de validación de registro de pacientes para un contexto de salud epidemiológica en Colombia. Implementado en C# con .NET 9 bajo Clean Architecture — el dominio es completamente independiente de bases de datos, frameworks y servicios externos.
+Sistema de validación de registro de pacientes para salud epidemiológica en Colombia. Implementado en C# con .NET 9 bajo Clean Architecture — el dominio es completamente independiente de bases de datos, frameworks y servicios externos.
 
 ## Stack
 
 - Lenguaje: C# con .NET 9
-- Pruebas: MSTest + Coverlet + ReportGenerator
-- Arquitectura: Clean Architecture (Domain puro)
+- Pruebas unitarias: MSTest + Coverlet + ReportGenerator
+- Pruebas integración: xUnit + Moq + EF Core InMemory
+- Pruebas HTTP: WebApplicationFactory
+- CI/CD: GitHub Actions
 
 ## Resultados
 
-- 23 pruebas unitarias — 0 errores
-- Line coverage: 100% (29/29)
-- Branch coverage: 100% (16/16)
+- U3: 23 pruebas unitarias · 100% cobertura
+- U4: 36 pruebas totales · 97% cobertura · CI/CD activo
 
 ## Cómo ejecutar las pruebas
 
-`ash
+```bash
+# Pruebas unitarias (Domain)
+dotnet test tests/Domain.Tests/
+
+# Pruebas de integración
+dotnet test tests/Integration.Tests/
+
+# Todas las pruebas
 dotnet test
-`
+```
 
-## Cómo generar el reporte de cobertura
+## Cobertura
 
-`ash
-dotnet test --collect:"XPlat Code Coverage"
-reportgenerator -reports:"tests/Domain.Tests/TestResults/**/coverage.cobertura.xml" -targetdir:"coverage-report" -reporttypes:Html
-`
+| Módulo | Line | Branch | Method |
+|--------|------|--------|--------|
+| Api | 100% | 100% | 100% |
+| Domain | 96.77% | 87.5% | 100% |
+| Infrastructure | 91.66% | 100% | 85.71% |
+| **Total** | **97.26%** | **87.5%** | **96.87%** |
 
-## Reporte de cobertura
+## Gestión de defectos
 
-Ver carpeta coverage-report/index.html
+| ID | Descripción | Causa | Estado |
+|----|-------------|-------|--------|
+| DEF-003 | HTTP retornaba 200 con doc inválido | Faltaba mapear errores a HTTP 400/409 | Cerrado |
 
-## Patrones aplicados
+## Reflexión
 
-- TDD: Red → Green → Refactor (3 iteraciones)
-- Patrón AAA: Arrange · Act · Assert
-- BDD: Given · When · Then
-- Clases de equivalencia y valores límite
-
-## Autor
-
-Astrid Carolina Rodríguez Cristancho
+- **Capa más difícil:** Infrastructure — requiere aislamiento con GUID único por prueba para evitar contaminación entre tests
+- **Mocks vs EF InMemory:** Mocks para verificar lógica de negocio aislada; EF InMemory para verificar persistencia real contra la base de datos
+- **CI/CD:** El valor está en bloquear automáticamente código que rompe tests — la calidad se protege sin intervención manual
