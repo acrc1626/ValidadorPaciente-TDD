@@ -31,17 +31,17 @@ public class RegistroPacienteMockTests
     // When:  se registra un paciente válido
     // Then:  se invoca Agregar exactamente una vez con el paciente correcto
     [Fact]
-    public void Registrar_PacienteValido_InvocaAgregarUnaVez()
+    public async Task Registrar_PacienteValido_InvocaAgregarUnaVez()
     {
         // Arrange
         _repositoryMock
             .Setup(r => r.ExistePorDocumento(It.IsAny<string>()))
-            .Returns(false);
+            .ReturnsAsync(false);
 
         var paciente = CrearPacienteValido("12345678");
 
         // Act
-        _registro.Registrar(paciente);
+        await _registro.Registrar(paciente);
 
         // Assert
         _repositoryMock.Verify(r => r.Agregar(paciente), Times.Once);
@@ -51,17 +51,17 @@ public class RegistroPacienteMockTests
     // When:  se intenta registrar el paciente
     // Then:  retorna DocumentoDuplicado y nunca llama a Agregar
     [Fact]
-    public void Registrar_DocumentoExistente_NuncaInvocaAgregar()
+    public async Task Registrar_DocumentoExistente_NuncaInvocaAgregar()
     {
         // Arrange
         _repositoryMock
             .Setup(r => r.ExistePorDocumento("12345678"))
-            .Returns(true);
+            .ReturnsAsync(true);
 
         var paciente = CrearPacienteValido("12345678");
 
         // Act
-        var resultado = _registro.Registrar(paciente);
+        var resultado = await _registro.Registrar(paciente);
 
         // Assert
         resultado.Should().Be(ResultadoRegistro.DocumentoDuplicado);
@@ -72,14 +72,13 @@ public class RegistroPacienteMockTests
     // When:  se intenta registrar
     // Then:  retorna PacienteFallecido y nunca consulta ni agrega en el repositorio
     [Fact]
-    public void Registrar_PacienteFallecido_NoInteractuaConRepositorio()
+    public async Task Registrar_PacienteFallecido_NoInteractuaConRepositorio()
     {
         // Arrange
-        var paciente = CrearPacienteValido("12345678");
-        paciente.Vivo = false;
+        var paciente = CrearPacienteValido("12345678") with { Vivo = false };
 
         // Act
-        var resultado = _registro.Registrar(paciente);
+        var resultado = await _registro.Registrar(paciente);
 
         // Assert
         resultado.Should().Be(ResultadoRegistro.PacienteFallecido);
@@ -91,14 +90,13 @@ public class RegistroPacienteMockTests
     // When:  se intenta registrar
     // Then:  retorna DocumentoInvalido y el repositorio no es consultado
     [Fact]
-    public void Registrar_DocumentoInvalido_NoInteractuaConRepositorio()
+    public async Task Registrar_DocumentoInvalido_NoInteractuaConRepositorio()
     {
         // Arrange
-        var paciente = CrearPacienteValido("12345678");
-        paciente.Documento = string.Empty;
+        var paciente = CrearPacienteValido("12345678") with { Documento = string.Empty };
 
         // Act
-        var resultado = _registro.Registrar(paciente);
+        var resultado = await _registro.Registrar(paciente);
 
         // Assert
         resultado.Should().Be(ResultadoRegistro.DocumentoInvalido);
@@ -106,23 +104,23 @@ public class RegistroPacienteMockTests
         _repositoryMock.Verify(r => r.Agregar(It.IsAny<Paciente>()),          Times.Never);
     }
 
-    // Given: constructor sin parámetros (usa InMemoryPacienteRepository internamente)
+    // Given: servicio con repositorio en memoria inyectado explícitamente
     // When:  se registra un paciente válido y se consultan los pacientes
-    // Then:  TotalRegistrados y ObtenerPacientes reflejan el registro correcto
+    // Then:  ObtenerPacientes refleja el registro correcto
     [Fact]
-    public void ConstructorSinParametros_UsaRepositorioEnMemoria_RegistraYConsulta()
+    public async Task RegistroPaciente_ConRepositorioEnMemoria_RegistraYConsulta()
     {
         // Arrange
-        var registro = new RegistroPaciente(); // crea InMemoryPacienteRepository internamente
+        var registro = new RegistroPaciente(new InMemoryPacienteRepository());
         var paciente = CrearPacienteValido("88888888");
 
         // Act
-        var resultado = registro.Registrar(paciente);
+        var resultado = await registro.Registrar(paciente);
 
         // Assert
         resultado.Should().Be(ResultadoRegistro.Exitoso);
-        registro.TotalRegistrados.Should().Be(1);
-        registro.ObtenerPacientes().Should().ContainSingle(p => p.Documento == "88888888");
+        var pacientes = await registro.ObtenerPacientes();
+        pacientes.Should().ContainSingle(p => p.Documento == "88888888");
     }
 
     private static Paciente CrearPacienteValido(string documento) => new()

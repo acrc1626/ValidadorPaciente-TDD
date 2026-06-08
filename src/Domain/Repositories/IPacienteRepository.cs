@@ -4,7 +4,7 @@ namespace Domain.Repositories;
 
 public interface IPacienteRepository
 {
-    bool ExistePorDocumento(string documento);
-    void Agregar(Paciente paciente);
-    IReadOnlyList<Paciente> ObtenerTodos();
+    Task<bool> ExistePorDocumento(string documento);
+    Task Agregar(Paciente paciente);
+    Task<IReadOnlyList<Paciente>> ObtenerTodos();
 }
